@@ -1,4 +1,4 @@
-name: Collect data from Github Advanced Security
+name: ghas-stats
 on:
   workflow_call:
     secrets:
