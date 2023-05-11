@@ -7,9 +7,6 @@ inputs:
   ghas-get-info-token:
       description: 'The token used by the downloaded code to gather data from GHAS'
       required: true
-env:
-  WORKING_DIRECTORY: /
-  SOLIDIFY_REPO: solidifydemo/ghas-stats-demo
 runs:
   using: "composite"
   steps:
