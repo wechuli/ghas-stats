@@ -1,79 +1,77 @@
-name: ghas-stats
-on:
-  workflow_call:
-    secrets:
-      solidify-access-token:
-        description: 'The token used to download the code that collects data from GHAS'
-        required: true
-      ghas-get-info-token:
-          description: 'The token used by the downloaded code to gather data from GHAS'
-          required: true
+name: 'ghas-stats'
+description: 'Collect additional data about Github Advanced Security'
+inputs:
+  solidify-access-token:
+    description: 'The token used to download the code that collects data from GHAS'
+    required: true
+  ghas-get-info-token:
+      description: 'The token used by the downloaded code to gather data from GHAS'
+      required: true
 env:
   WORKING_DIRECTORY: /
   SOLIDIFY_REPO: solidifydemo/ghas-stats-demo
-jobs:
-  deploy-binaries-to-repo:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Solidify's repository
+runs:
+  using: "composite"
+  steps:
+  - name: Checkout Solidify's repository
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ env.SOLIDIFY_REPO }}
+        token: ${{ secrets.solidify-access-token }}
+        path: solidify-repo
+
+    - name: Insert token
+      run: |
+        echo "Inserting token"
+        sed -i "s/\"Token\": \"\"/\"Token\": \"${{ secrets.ghas-get-info-token }}\"/" appsettings.json
+      working-directory: solidify-repo/bin
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.0.x
+
+    - name: Run flow for ${{ github.repository_owner }}
+      run: |
+        dotnet GHAS.Stats.Api.dll "${{ github.repository_owner }}"
+      working-directory: solidify-repo/bin
+
+    - name: Remove token
+      run: |
+        echo "Removing token"
+        sed -i "s/\"Token\": \"${{ secrets.ghas-get-info-token }}\"/\"Token\": \"\"/" appsettings.json
+      working-directory: solidify-repo/bin
+
+    - name: Checkout this repository
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.SOLIDIFY_REPO }}
-          token: ${{ secrets.solidify-access-token }}
-          path: solidify-repo
+          path: this-repo
 
-      - name: Insert token
-        run: |
-          echo "Inserting token"
-          sed -i "s/\"Token\": \"\"/\"Token\": \"${{ secrets.ghas-get-info-token }}\"/" appsettings.json
-        working-directory: solidify-repo/bin
+    - name: Move alerts file from Solidify repo to this repo
+      run: |
+        cp solidify-repo/bin/alerts.json this-repo/alerts.json
+      working-directory: /
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: 6.0.x
+    - name: Add changes
+      run: |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        git add *
+      working-directory: this-repo
 
-      - name: Run flow for ${{ github.repository_owner }}
-        run: |
-          dotnet GHAS.Stats.Api.dll "${{ github.repository_owner }}"
-        working-directory: solidify-repo/bin
+    - name: Check if any changes were made
+      id: check-changes
+      run: |
+        if [[ -z $(git status --porcelain) ]]; then
+          echo "changes=false" >> $GITHUB_ENV
+        else
+          echo "changes=true" >> $GITHUB_ENV
+        fi
+      working-directory: this-repo
 
-      - name: Remove token
-        run: |
-          echo "Removing token"
-          sed -i "s/\"Token\": \"${{ secrets.ghas-get-info-token }}\"/\"Token\": \"\"/" appsettings.json
-        working-directory: solidify-repo/bin
-
-      - name: Checkout this repository
-          uses: actions/checkout@v3
-          with:
-            path: this-repo
-
-      - name: Move alerts file from Solidify repo to this repo
-        run: |
-          cp solidify-repo/bin/alerts.json this-repo/alerts.json
-        working-directory: /
-
-      - name: Add changes
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git add *
-        working-directory: this-repo
-
-      - name: Check if any changes were made
-        id: check-changes
-        run: |
-          if [[ -z $(git status --porcelain) ]]; then
-            echo "changes=false" >> $GITHUB_ENV
-          else
-            echo "changes=true" >> $GITHUB_ENV
-          fi
-        working-directory: this-repo
-
-      - name: Commit and push changes if any
-        if: env.changes == 'true'
-        run: |
-          git commit -m "Updating alerts for ${{ github.repository_owner }}"
-          git push
-        working-directory: this-repo
+    - name: Commit and push changes if any
+      if: env.changes == 'true'
+      run: |
+        git commit -m "Updating alerts for ${{ github.repository_owner }}"
+        git push
+      working-directory: this-repo
