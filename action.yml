@@ -8,7 +8,7 @@ inputs:
       description: 'The token used by the downloaded code to gather data from GHAS'
       required: true
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
   - name: Checkout Solidify's repository
       uses: actions/checkout@v3
