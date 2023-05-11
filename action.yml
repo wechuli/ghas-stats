@@ -16,13 +16,13 @@ runs:
       uses: actions/checkout@v3
       with:
         repository: ${{ env.SOLIDIFY_REPO }}
-        token: ${{ secrets.solidify-access-token }}
+        token: ${{ inputs.solidify-access-token }}
         path: solidify-repo
 
     - name: Insert token
       run: |
         echo "Inserting token"
-        sed -i "s/\"Token\": \"\"/\"Token\": \"${{ secrets.ghas-get-info-token }}\"/" appsettings.json
+        sed -i "s/\"Token\": \"\"/\"Token\": \"${{ inputs.ghas-get-info-token }}\"/" appsettings.json
       working-directory: solidify-repo/bin
 
     - name: Setup .NET
@@ -38,7 +38,7 @@ runs:
     - name: Remove token
       run: |
         echo "Removing token"
-        sed -i "s/\"Token\": \"${{ secrets.ghas-get-info-token }}\"/\"Token\": \"\"/" appsettings.json
+        sed -i "s/\"Token\": \"${{ inputs.ghas-get-info-token }}\"/\"Token\": \"\"/" appsettings.json
       working-directory: solidify-repo/bin
 
     - name: Checkout this repository
