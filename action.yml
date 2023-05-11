@@ -1,10 +1,12 @@
 name: 'ghas-stats'
-description: 'Greet someone'
+description: 'Collect additional data about Github Advanced Security'
 inputs:
-  who-to-greet:  # id of input
-    description: 'Who to greet'
+  solidify-access-token:
+    description: 'The token used to download the code that collects data from GHAS'
     required: true
-    default: 'World'
+  ghas-get-info-token:
+      description: 'The token used by the downloaded code to gather data from GHAS'
+      required: true
 runs:
   using: "composite"
   steps:
